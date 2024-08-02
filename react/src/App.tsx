@@ -1,35 +1,61 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+import { useEffect, useState } from "react";
+import { MessageData } from '../../types/ISocket';
+export default () => {
+    const [socket, setSocket] = useState<WebSocket | null>(null);
+    const [isSocketConnect, setIsSocketConnect] = useState<boolean>(false); // 连接状态
+    const [sendValue, setSendValue] = useState<string>('');//发送内容
+    const [messageList, setMessageList] = useState<MessageData[]>([]); // 消息记录
+    // 发送消息
+    function onSendMessage(event: React.KeyboardEvent) {
+        if (event.code === 'Enter' && socket && isSocketConnect) {
+            if (!sendValue) return message.warning('请输入消息内容');
+            const value = {
+                sendType: 'text',
+                content: sendValue,
+                timestamp: Date.now(),
+                isMy: true,
+            } as MessageData;
+            socket.send(JSON.stringify(value));
+            setMessageList((messageList) => messageList.concat(value));
+            setSendValue(''); // 清空发送内容
+        }
+    }
+    // 连接WebSocket
+    function webSocketConnect() {
+        const socket = new WebSocket('ws://localhost:8088');
+        // WebSocket 连接已打开
+        socket.onopen = () => {
+            setSocket(socket);
+            setIsSocketConnect(true);
+            console.log('连接成功');
+        };
+        // 连接失败
+        socket.onerror = (err) => {
+            setIsSocketConnect(false);
+            console.error(err, '连接失败');
+        }
+        // 关闭连接
+        socket.onclose = () => setIsSocketConnect(false);
+        // 接收服务端发送过来的消息
+        socket.addEventListener('message', (event) => {
+            const data = JSON.parse(event.data) as MessageData;
+            // 合并服务端发送过来的消息
+            setMessageList((messageList) => messageList.concat(data));
+        });
+    }
+    useEffect(() => {
+        webSocketConnect();
+    }, []);
+    return (
+        <main>
+            <div>
+                <input type="text" value={sendValue} onChange={(e) => setSendValue(e.target.value)} onKeyUp={onSendMessage} />
+            </div>
+            <div style={{ margin: 'auto', width: '100%' }}>
+                {messageList.map((item) => {
+                    return <div style={{ color: item.isMy ? 'red' : 'black' }}>{item.content}</div>
+                })}
+            </div>
+        </main>
+    )
 }
-
-export default App
