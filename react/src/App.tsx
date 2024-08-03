@@ -8,7 +8,7 @@ export default () => {
     // 发送消息
     function onSendMessage(event: React.KeyboardEvent) {
         if (event.code === 'Enter' && socket && isSocketConnect) {
-            if (!sendValue) return message.warning('请输入消息内容');
+            if (!sendValue) throw new Error('请输入内容');
             const value = {
                 sendType: 'text',
                 content: sendValue,
